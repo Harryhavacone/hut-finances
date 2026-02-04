@@ -376,17 +376,24 @@ with col2:
         label_visibility="collapsed"
     )
 
-# Save button
+# Track if data has changed since last calculation
+if 'last_calculated' not in st.session_state:
+    st.session_state['last_calculated'] = {}
+
+last_calc = st.session_state['last_calculated']
+data_changed = (
+    families_data != last_calc.get('families') or
+    stays_data != last_calc.get('stays') or
+    expenses_data != last_calc.get('expenses')
+)
+
+# Clear results if data has been edited
+if data_changed and 'results' in st.session_state:
+    del st.session_state['results']
+
+# Calculate button
 st.divider()
-col_save, col_calc = st.columns(2)
-
-with col_save:
-    if st.button("💾 Save Data", type="secondary"):
-        save_data(families_data, stays_data, expenses_data)
-        st.success("Data saved to Google Sheets!")
-
-with col_calc:
-    calculate_clicked = st.button("Calculate", type="primary")
+calculate_clicked = st.button("Calculate & Save", type="primary")
 
 if calculate_clicked:
     if families_data and stays_data and expenses_data:
@@ -438,6 +445,16 @@ if calculate_clicked:
                 balances[family] = paid - owes
 
             settlements = calculate_settlements(balances)
+
+            # Save data to Google Sheets
+            save_data(families_data, stays_data, expenses_data)
+
+            # Track what data was used for this calculation
+            st.session_state['last_calculated'] = {
+                'families': families_data,
+                'stays': stays_data,
+                'expenses': expenses_data,
+            }
 
             # Store results in session state
             st.session_state['results'] = {
